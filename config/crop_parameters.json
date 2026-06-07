@@ -1,0 +1,44 @@
+{
+  "crops": {
+    "tomato": {
+      "name": "Tomato",
+      "Kc": { "initial": 0.40, "vegetative": 0.75, "flowering": 1.15, "ripening": 0.80 },
+      "rooting_depth_m": 0.7,
+      "soil_moisture_threshold_pct": 35,
+      "season_days": 130,
+      "notes": "Sensitive to water stress during flowering. Avoid overwatering."
+    },
+    "wheat": {
+      "name": "Wheat",
+      "Kc": { "initial": 0.30, "vegetative": 0.70, "flowering": 1.15, "ripening": 0.25 },
+      "rooting_depth_m": 1.0,
+      "soil_moisture_threshold_pct": 40,
+      "season_days": 120,
+      "notes": "Requires uniform moisture during grain filling stage."
+    },
+    "maize": {
+      "name": "Maize (Corn)",
+      "Kc": { "initial": 0.30, "vegetative": 0.70, "flowering": 1.20, "ripening": 0.35 },
+      "rooting_depth_m": 1.0,
+      "soil_moisture_threshold_pct": 40,
+      "season_days": 125,
+      "notes": "Critical water need at silking/tasselling stage."
+    },
+    "rice": {
+      "name": "Rice (Paddy)",
+      "Kc": { "initial": 1.05, "vegetative": 1.05, "flowering": 1.20, "ripening": 0.75 },
+      "rooting_depth_m": 0.5,
+      "soil_moisture_threshold_pct": 80,
+      "season_days": 120,
+      "notes": "Flooded field conditions. High water demand throughout season."
+    },
+    "cotton": {
+      "name": "Cotton",
+      "Kc": { "initial": 0.35, "vegetative": 0.75, "flowering": 1.15, "ripening": 0.50 },
+      "rooting_depth_m": 1.0,
+      "soil_moisture_threshold_pct": 35,
+      "season_days": 180,
+      "notes": "Drought tolerant but needs consistent moisture during boll development."
+    }
+  }
+}
