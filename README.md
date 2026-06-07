@@ -13,7 +13,12 @@ Drought and water scarcity affect hundreds of millions of people globally. Agric
 - Forecasts seasonal water usage using time-series models
 # prototype
 <img width="1918" height="776" alt="image" src="https://github.com/user-attachments/assets/c0fb6062-7feb-455b-8bc6-cf9da0d30a22" />
+demo:<img width="1913" height="912" alt="image" src="https://github.com/user-attachments/assets/d1c55d30-288f-4454-ae39-06d627a7f1b4" />
 
+# architecture
+<img width="846" height="653" alt="image" src="https://github.com/user-attachments/assets/ea439563-e580-4e03-b715-c8e2c536689f" />
+[Uploading smart_watering_dashboard.html…]()
+# workflow:<img width="967" height="880" alt="image" src="https://github.com/user-attachments/assets/60c7d2d6-9b14-4f2a-a407-f98f5252fdf7" />
 
 ## Features
 
