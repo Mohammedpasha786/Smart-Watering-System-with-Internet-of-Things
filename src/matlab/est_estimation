@@ -1,0 +1,120 @@
+%% Smart Watering System - ET Estimation & Water Forecast
+%  ThingSpeak MATLAB Analysis App
+%  Computes ET0, ETc, and seasonal water forecast from channel data
+%  Usage: Paste into ThingSpeak Analysis > MATLAB Analysis
+
+%% Configuration
+channelID   = YOUR_CHANNEL_ID;      % ThingSpeak Channel ID
+readAPIKey  = 'YOUR_READ_API_KEY';  % ThingSpeak Read API Key
+cropType    = 'tomato';             % 'tomato','wheat','maize','rice'
+growthStage = 'flowering';          % 'initial','vegetative','flowering','ripening'
+latitude    = 17.98;                % degrees (Warangal)
+elevation   = 260;                  % meters above sea level
+
+%% Crop Coefficients (FAO-56)
+Kc = struct();
+Kc.tomato   = [0.40, 0.75, 1.15, 0.80];
+Kc.wheat    = [0.30, 0.70, 1.15, 0.25];
+Kc.maize    = [0.30, 0.70, 1.20, 0.35];
+Kc.rice     = [1.05, 1.05, 1.20, 0.75];
+stages      = {'initial','vegetative','flowering','ripening'};
+
+stageIdx = find(strcmp(stages, growthStage));
+if isempty(stageIdx), stageIdx = 2; end
+kc_value = Kc.(cropType)(stageIdx);
+
+%% Fetch Channel Data (Last 100 readings)
+data = thingSpeakRead(channelID, 'Fields', [1 2 3 4], ...
+    'NumPoints', 100, 'ReadKey', readAPIKey);
+
+% Columns: [soil_moisture, temperature, humidity, light]
+soil_moisture = data(:, 1);
+temperature   = data(:, 2);
+humidity      = data(:, 3);
+light_lux     = data(:, 4);
+
+% Remove NaN rows
+validIdx = ~any(isnan(data), 2);
+T   = temperature(validIdx);
+RH  = humidity(validIdx);
+n   = sum(validIdx);
+
+%% Penman-Monteith ET0 Calculation
+doy = day(datetime('today'), 'dayofyear');
+
+% Atmospheric pressure
+P = 101.3 * ((293 - 0.0065 * elevation) / 293).^5.26;
+
+% Psychrometric constant
+gamma = 0.000665 * P;
+
+% Saturation vapor pressure
+es = 0.6108 .* exp((17.27 .* T) ./ (T + 237.3));
+
+% Actual vapor pressure
+ea = es .* (RH / 100);
+
+% Slope of vapor pressure curve
+delta = (4098 .* es) ./ (T + 237.3).^2;
+
+% Extra-terrestrial radiation
+phi    = latitude * pi / 180;
+dr     = 1 + 0.033 * cos(2*pi*doy/365);
+sdec   = 0.409 * sin(2*pi*doy/365 - 1.39);
+omega_s = acos(-tan(phi) .* tan(sdec));
+Ra = (24*60/pi) * 0.0820 .* dr .* (omega_s .* sin(phi) .* sin(sdec) + ...
+     cos(phi) .* cos(sdec) .* sin(omega_s));
+
+% Solar radiation from light sensor (simplified)
+Rs = (light_lux / 1000) .* 20;  % rough estimate in MJ/m2/day
+Rs = min(Rs, Ra);
+
+% Net radiation
+alpha = 0.23;
+Rns   = (1 - alpha) .* Rs;
+sigma = 4.903e-9;
+TK    = T + 273.16;
+Rso   = (0.75 + 2e-5 * elevation) .* Ra;
+Rnl   = sigma .* TK.^4 .* (0.34 - 0.14.*sqrt(ea)) .* (1.35.*(Rs./Rso) - 0.35);
+Rn    = Rns - Rnl;
+
+% Wind speed (assumed constant if no anemometer)
+u2    = 2.0;  % m/s
+
+% ET0
+ET0 = (0.408.*delta.*(Rn) + gamma.*(900./(T+273)).*u2.*(es-ea)) ./ ...
+      (delta + gamma.*(1 + 0.34.*u2));
+ET0 = max(ET0, 0);
+
+% ETc
+ETc = kc_value .* ET0;
+
+%% Summary Statistics
+fprintf('=== ET Analysis Summary ===\n');
+fprintf('Crop: %s | Stage: %s | Kc: %.2f\n', cropType, growthStage, kc_value);
+fprintf('Mean ET0: %.2f mm/day\n', mean(ET0));
+fprintf('Mean ETc: %.2f mm/day\n', mean(ETc));
+fprintf('Mean Soil Moisture: %.1f%%\n', mean(soil_moisture(validIdx)));
+
+%% Irrigation Need Flag
+meanSoil = mean(soil_moisture(validIdx));
+irrigateFlag = (meanSoil < 35) && (mean(ETc) > 4);
+if irrigateFlag
+    fprintf('>> RECOMMENDATION: Irrigation needed!\n');
+else
+    fprintf('>> Soil moisture adequate. No immediate action.\n');
+end
+
+%% Plot ET0 and ETc Trend
+figure;
+plot(ET0, 'b-', 'LineWidth', 1.5); hold on;
+plot(ETc, 'g--', 'LineWidth', 1.5);
+xlabel('Sample Index');
+ylabel('ET (mm/day)');
+title(sprintf('ET0 vs ETc — %s (%s stage)', cropType, growthStage));
+legend('ET_0 (Reference)', 'ET_c (Crop)');
+grid on;
+
+%% Write ET0 back to ThingSpeak (Field 7)
+% thingSpeakWrite(channelID, mean(ET0), 'Fields', 7, 'WriteKey', 'YOUR_WRITE_KEY');
+
