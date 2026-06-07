@@ -1,0 +1,309 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-sans);}
+#dash{padding:14px;display:flex;flex-direction:column;gap:12px;}
+.dash-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.dash-title{font-size:16px;font-weight:500;color:var(--color-text-primary);}
+.dash-sub{font-size:12px;color:var(--color-text-secondary);}
+.status-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:0.5px solid;font-size:11px;font-weight:500;}
+.pill-ok{background:var(--color-background-success);border-color:var(--color-border-success);color:var(--color-text-success);}
+.pill-warn{background:var(--color-background-warning);border-color:var(--color-border-warning);color:var(--color-text-warning);}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.kpi{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:10px 12px;}
+.kpi-label{font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+.kpi-val{font-size:22px;font-weight:500;color:var(--color-text-primary);line-height:1.1;}
+.kpi-unit{font-size:11px;color:var(--color-text-secondary);}
+.kpi-delta{font-size:10px;margin-top:3px;}
+.chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:10px;}
+.panel{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px;}
+.panel-title{font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+canvas{width:100%!important;}
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.event-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;}
+.event-row:last-child{border-bottom:none;}
+.event-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.event-time{color:var(--color-text-secondary);min-width:44px;}
+.event-msg{flex:1;color:var(--color-text-primary);}
+.event-badge{font-size:10px;padding:2px 7px;border-radius:10px;}
+.eb-pump{background:var(--color-background-success);color:var(--color-text-success);}
+.eb-alert{background:var(--color-background-warning);color:var(--color-text-warning);}
+.eb-info{background:var(--color-background-secondary);color:var(--color-text-secondary);border:0.5px solid var(--color-border-tertiary);}
+.crop-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;}
+.crop-row:last-child{border-bottom:none;}
+.crop-label{color:var(--color-text-secondary);}
+.crop-val{font-weight:500;color:var(--color-text-primary);}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.week-bar{display:flex;gap:3px;align-items:flex-end;height:60px;}
+.wbar{flex:1;border-radius:3px 3px 0 0;background:#1D9E75;opacity:.7;transition:height .5s;min-height:4px;}
+.wbar.today{opacity:1;}
+.wday{font-size:10px;color:var(--color-text-secondary);text-align:center;margin-top:3px;}
+.alert-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;}
+.alert-row:last-child{border-bottom:none;}
+.alert-icon{margin-top:1px;flex-shrink:0;}
+</style>
+<div id="dash">
+  <div class="dash-header">
+    <i class="ti ti-plant" style="font-size:20px;color:#1D9E75" aria-hidden="true"></i>
+    <div>
+      <div class="dash-title">Smart Watering System</div>
+      <div class="dash-sub">SR University, Warangal — Tomato field A</div>
+    </div>
+    <div class="status-pill pill-ok" style="margin-left:auto"><span class="dot"></span>System online</div>
+    <div class="status-pill pill-ok"><span class="dot"></span>ThingSpeak live</div>
+    <div id="dash-time" style="font-size:11px;color:var(--color-text-secondary)"></div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">Soil moisture</div>
+      <div><span class="kpi-val" id="k-moist">36</span><span class="kpi-unit"> %</span></div>
+      <div class="kpi-delta" id="k-moist-d" style="color:var(--color-text-warning)">Below threshold</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Temperature</div>
+      <div><span class="kpi-val" id="k-temp">31</span><span class="kpi-unit"> °C</span></div>
+      <div class="kpi-delta" style="color:var(--color-text-secondary)">DHT22 sensor</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">ET₀ today</div>
+      <div><span class="kpi-val" id="k-et">5.4</span><span class="kpi-unit"> mm</span></div>
+      <div class="kpi-delta" style="color:var(--color-text-secondary)">Penman-Monteith</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Water used today</div>
+      <div><span class="kpi-val" id="k-water">3</span><span class="kpi-unit"> L</span></div>
+      <div class="kpi-delta" style="color:var(--color-text-secondary)" id="k-pump-ct">2 pump cycles</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Rain forecast</div>
+      <div><span class="kpi-val" id="k-rain">12</span><span class="kpi-unit"> %</span></div>
+      <div class="kpi-delta" style="color:var(--color-text-secondary)">Next 6h</div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="panel">
+      <div class="panel-title">
+        <span>Soil moisture — 24h history</span>
+        <span style="font-size:10px;color:var(--color-text-secondary)">30% threshold</span>
+      </div>
+      <canvas id="chart-moisture" height="90"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span>Temperature / humidity</span></div>
+      <canvas id="chart-temphu" height="90"></canvas>
+    </div>
+  </div>
+
+  <div class="bottom-grid">
+    <div class="panel">
+      <div class="panel-title"><span>Irrigation events — today</span></div>
+      <div id="events-list">
+        <div class="event-row"><div class="event-dot" style="background:#1D9E75"></div><span class="event-time">06:14</span><span class="event-msg">Pump ON — 15s cycle</span><span class="event-badge eb-pump">Pump</span></div>
+        <div class="event-row"><div class="event-dot" style="background:#1D9E75"></div><span class="event-time">09:32</span><span class="event-msg">Pump ON — moisture 27%</span><span class="event-badge eb-pump">Pump</span></div>
+        <div class="event-row"><div class="event-dot" style="background:#BA7517"></div><span class="event-time">11:15</span><span class="event-msg">Temp alert — 38.2°C</span><span class="event-badge eb-alert">Alert</span></div>
+        <div class="event-row"><div class="event-dot" style="background:#185FA5"></div><span class="event-time">12:00</span><span class="event-msg">ThingSpeak upload OK</span><span class="event-badge eb-info">Cloud</span></div>
+        <div class="event-row"><div class="event-dot" style="background:#185FA5"></div><span class="event-time">14:30</span><span class="event-msg">ML model: WAIT (P=31%)</span><span class="event-badge eb-info">ML</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>Crop parameters</span></div>
+      <div class="crop-row"><span class="crop-label">Crop type</span><span class="crop-val">Tomato</span></div>
+      <div class="crop-row"><span class="crop-label">Growth stage</span><span class="crop-val">Flowering</span></div>
+      <div class="crop-row"><span class="crop-label">Kc coefficient</span><span class="crop-val">1.15</span></div>
+      <div class="crop-row"><span class="crop-label">ETc demand</span><span class="crop-val" id="c-etc">-- mm/d</span></div>
+      <div class="crop-row"><span class="crop-label">pH (current)</span><span class="crop-val" id="c-ph">--</span></div>
+      <div class="crop-row"><span class="crop-label">Light intensity</span><span class="crop-val" id="c-lux">--</span></div>
+      <div class="panel-title" style="margin-top:12px;margin-bottom:6px;"><span>Weekly water usage (L)</span></div>
+      <div>
+        <div class="week-bar" id="week-bars"></div>
+        <div style="display:flex;gap:3px;margin-top:2px" id="week-labels"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span>Active alerts</span></div>
+      <div class="alert-row">
+        <i class="ti ti-alert-triangle alert-icon" style="font-size:14px;color:var(--color-text-warning)" aria-hidden="true"></i>
+        <div><div style="font-weight:500;font-size:12px;color:var(--color-text-primary)">Soil moisture low</div><div style="font-size:11px;color:var(--color-text-secondary)" id="alert-moist-msg">Moisture 36% near threshold</div></div>
+      </div>
+      <div class="alert-row">
+        <i class="ti ti-check alert-icon" style="font-size:14px;color:var(--color-text-success)" aria-hidden="true"></i>
+        <div><div style="font-weight:500;font-size:12px;color:var(--color-text-primary)">pH in range</div><div style="font-size:11px;color:var(--color-text-secondary)">6.4–7.2 optimal for tomato</div></div>
+      </div>
+      <div class="alert-row">
+        <i class="ti ti-check alert-icon" style="font-size:14px;color:var(--color-text-success)" aria-hidden="true"></i>
+        <div><div style="font-weight:500;font-size:12px;color:var(--color-text-primary)">WiFi stable</div><div style="font-size:11px;color:var(--color-text-secondary)">ThingSpeak uploads normal</div></div>
+      </div>
+      <div class="alert-row">
+        <i class="ti ti-info-circle alert-icon" style="font-size:14px;color:var(--color-text-info)" aria-hidden="true"></i>
+        <div><div style="font-weight:500;font-size:12px;color:var(--color-text-primary)">Seasonal forecast</div><div style="font-size:11px;color:var(--color-text-secondary)">Above avg ET₀ this week</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+const textColor = dark ? '#c2c0b6' : '#6b6b68';
+const gridColor = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+Chart.defaults.font.family = 'var(--font-sans)';
+Chart.defaults.font.size = 11;
+
+function genHistory(base, noise, len=24){
+  return Array.from({length:len},(_,i)=>Math.max(5,base + Math.sin(i/3)*noise*0.6 + (Math.random()-0.5)*noise));
+}
+
+const hours = Array.from({length:24},(_,i)=>{const h=(new Date().getHours()-23+i+24)%24; return h+':00';});
+const moistureData = genHistory(38,18);
+const tempData = genHistory(29,7);
+const humData = genHistory(58,15);
+
+const cMoisture = new Chart(document.getElementById('chart-moisture'),{
+  type:'line',
+  data:{
+    labels: hours,
+    datasets:[{
+      label:'Moisture %',
+      data: moistureData,
+      borderColor:'#1D9E75',
+      backgroundColor:'rgba(29,158,117,0.08)',
+      fill:true,
+      tension:0.4,
+      pointRadius:0,
+      borderWidth:1.5
+    },{
+      label:'Threshold',
+      data: Array(24).fill(30),
+      borderColor:'rgba(186,117,23,0.6)',
+      borderDash:[4,3],
+      borderWidth:1,
+      pointRadius:0,
+      fill:false
+    }]
+  },
+  options:{
+    responsive:true,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ticks:{color:textColor,maxTicksLimit:6},grid:{color:gridColor}},
+      y:{ticks:{color:textColor},grid:{color:gridColor},min:0,max:100}
+    }
+  }
+});
+
+const cTH = new Chart(document.getElementById('chart-temphu'),{
+  type:'line',
+  data:{
+    labels: hours,
+    datasets:[{
+      label:'Temp °C',
+      data: tempData,
+      borderColor:'#BA7517',
+      fill:false,
+      tension:0.4,
+      pointRadius:0,
+      borderWidth:1.5,
+      yAxisID:'yT'
+    },{
+      label:'Humidity %',
+      data: humData,
+      borderColor:'#185FA5',
+      fill:false,
+      tension:0.4,
+      pointRadius:0,
+      borderWidth:1.5,
+      yAxisID:'yH'
+    }]
+  },
+  options:{
+    responsive:true,
+    plugins:{legend:{labels:{color:textColor,boxWidth:10,padding:8}}},
+    scales:{
+      x:{ticks:{color:textColor,maxTicksLimit:4},grid:{color:gridColor}},
+      yT:{ticks:{color:'#BA7517'},grid:{color:gridColor},position:'left'},
+      yH:{ticks:{color:'#185FA5'},grid:{display:false},position:'right'}
+    }
+  }
+});
+
+const weekVals = [4.2,6.1,3.8,7.0,5.5,4.9,3.1];
+const weekDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const maxW = Math.max(...weekVals);
+const barsEl = document.getElementById('week-bars');
+const labsEl = document.getElementById('week-labels');
+weekDays.forEach((d,i)=>{
+  const isToday = i===6;
+  const pct = Math.round(weekVals[i]/maxW*100);
+  barsEl.innerHTML += `<div class="wbar${isToday?' today':''}" style="height:${pct}%" title="${weekVals[i]}L"></div>`;
+  labsEl.innerHTML += `<div class="wday" style="flex:1">${d}</div>`;
+});
+
+let tick = 0;
+let moisture = 36, temp = 31, hum = 57, lux = 540, ph = 6.8, rain = 12, pumpCt = 2;
+
+function jitter(v, r){ return Math.max(0, v + (Math.random()-0.5)*r); }
+function fmt(n, d=1){ return Number(n).toFixed(d); }
+function computeET0(t, h, l){
+  const es = 0.6108*Math.exp((17.27*t)/(t+237.3));
+  const ea = es*(h/100);
+  const delta = (4098*es)/Math.pow(t+237.3,2);
+  const Rn = (l/1000)*12;
+  const et0 = (0.408*delta*Rn + 0.0665*(900/(t+273))*1.8*(es-ea)) / (delta + 0.0665*(1+0.34*1.8));
+  return Math.max(0,et0);
+}
+
+function pad(n){ return String(Math.round(n)).padStart(2,'0'); }
+function updateDash(){
+  tick++;
+  moisture = Math.max(10, moisture - 0.05 + (Math.random()-0.5)*0.3);
+  temp = jitter(temp, 0.3);
+  hum = jitter(hum, 0.6);
+  lux = jitter(lux, 20);
+  ph = Math.max(5.5, Math.min(8.5, jitter(ph, 0.03)));
+  rain = Math.max(0, Math.min(100, jitter(rain, 1)));
+
+  if(moisture < 28 && !window._pumping){
+    window._pumping = true;
+    pumpCt++;
+    setTimeout(()=>{ moisture = Math.min(75, moisture+20); window._pumping=false; }, 5000);
+  }
+
+  const et0 = computeET0(temp, hum, lux);
+  const etc = et0 * 1.15;
+
+  document.getElementById('k-moist').textContent = fmt(moisture,0);
+  document.getElementById('k-temp').textContent = fmt(temp,1);
+  document.getElementById('k-et').textContent = fmt(et0,1);
+  document.getElementById('k-water').textContent = fmt(pumpCt*1.5,1);
+  document.getElementById('k-pump-ct').textContent = pumpCt+' pump cycles';
+  document.getElementById('k-rain').textContent = fmt(rain,0);
+  document.getElementById('k-moist-d').textContent = moisture < 30 ? 'Below threshold' : 'Adequate';
+  document.getElementById('k-moist-d').style.color = moisture < 30 ? 'var(--color-text-warning)' : 'var(--color-text-secondary)';
+
+  document.getElementById('c-etc').textContent = fmt(etc,2)+' mm/d';
+  document.getElementById('c-ph').textContent = fmt(ph,2);
+  document.getElementById('c-lux').textContent = fmt(lux,0)+' lux';
+  document.getElementById('alert-moist-msg').textContent = 'Moisture '+fmt(moisture,0)+'% '+(moisture<30?'below':'near')+' threshold (30%)';
+
+  const now = new Date();
+  document.getElementById('dash-time').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+  if(tick % 5 === 0){
+    cMoisture.data.datasets[0].data.shift();
+    cMoisture.data.datasets[0].data.push(moisture);
+    cMoisture.update('none');
+    cTH.data.datasets[0].data.shift();
+    cTH.data.datasets[0].data.push(temp);
+    cTH.data.datasets[1].data.shift();
+    cTH.data.datasets[1].data.push(hum);
+    cTH.update('none');
+  }
+}
+
+setInterval(updateDash, 1500);
+updateDash();
+</script>

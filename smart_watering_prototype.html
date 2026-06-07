@@ -1,0 +1,369 @@
+<style>
+:root{--green:#1D9E75;--green-light:#E1F5EE;--amber:#BA7517;--amber-light:#FAEEDA;--coral:#993C1D;--coral-light:#FAECE7;--blue:#185FA5;--blue-light:#E6F1FB;--teal:#0F6E56;--teal-light:#E1F5EE;}
+*{box-sizing:border-box;margin:0;padding:0;}
+#proto{font-family:var(--font-mono,'Courier New',monospace);padding:16px;display:flex;flex-direction:column;gap:12px;}
+.hdr{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--color-border-tertiary);padding-bottom:10px;}
+.badge{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500;}
+.badge-on{background:var(--color-background-success);color:var(--color-text-success);}
+.badge-off{background:var(--color-background-tertiary);color:var(--color-text-secondary);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.card{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px;}
+.card-title{font-size:11px;color:var(--color-text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}
+.big-val{font-size:26px;font-weight:500;color:var(--color-text-primary);line-height:1;}
+.unit{font-size:13px;color:var(--color-text-secondary);margin-left:2px;}
+.bar-track{height:8px;background:var(--color-background-tertiary);border-radius:4px;overflow:hidden;margin-top:6px;}
+.bar-fill{height:100%;border-radius:4px;transition:width 1.2s ease;}
+.bar-moisture{background:#1D9E75;}
+.bar-humidity{background:#185FA5;}
+.bar-warn{background:#BA7517;}
+.sensor-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px;}
+.sensor-row:last-child{border-bottom:none;}
+.sensor-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sensor-name{flex:1;color:var(--color-text-secondary);}
+.sensor-val{font-weight:500;color:var(--color-text-primary);}
+.serial{background:#0d1117;border-radius:8px;padding:10px 12px;height:130px;overflow-y:auto;font-size:11px;line-height:1.7;}
+.serial-line{display:block;}
+.serial-line.ok{color:#3fb950;}
+.serial-line.warn{color:#d29922;}
+.serial-line.err{color:#f85149;}
+.serial-line.info{color:#58a6ff;}
+.pump-indicator{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);}
+.pump-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;transition:background .4s;}
+.pump-dot.active{background:#1D9E75;box-shadow:0 0 6px #1D9E7566;}
+.pump-dot.idle{background:var(--color-border-secondary);}
+.decision-box{padding:10px 12px;border-radius:8px;border:0.5px solid;font-size:12px;line-height:1.6;}
+.decision-irrigate{background:var(--color-background-success);border-color:var(--color-border-success);color:var(--color-text-success);}
+.decision-wait{background:var(--color-background-secondary);border-color:var(--color-border-tertiary);color:var(--color-text-secondary);}
+.controls{display:flex;gap:8px;flex-wrap:wrap;}
+.btn{padding:6px 14px;border-radius:6px;border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);cursor:pointer;font-size:12px;font-family:var(--font-mono);}
+.btn:hover{background:var(--color-background-tertiary);}
+.btn-green{background:var(--color-background-success);border-color:var(--color-border-success);color:var(--color-text-success);}
+.slider-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-secondary);}
+.slider-row input{flex:1;accent-color:#1D9E75;}
+.slider-val{min-width:36px;text-align:right;color:var(--color-text-primary);font-weight:500;}
+.ml-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;}
+.ml-bar{flex:1;height:6px;background:var(--color-background-tertiary);border-radius:3px;overflow:hidden;}
+.ml-fill{height:100%;background:#1D9E75;border-radius:3px;transition:width .8s ease;}
+.ml-label{color:var(--color-text-secondary);min-width:140px;}
+.ml-pct{min-width:36px;text-align:right;font-weight:500;color:var(--color-text-primary);}
+.section-title{font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px;}
+</style>
+<div id="proto">
+  <div class="hdr">
+    <i class="ti ti-cpu" style="font-size:18px;color:var(--color-text-secondary)" aria-hidden="true"></i>
+    <span style="font-size:14px;font-weight:500;color:var(--color-text-primary)">Smart Watering IoT — Working Prototype</span>
+    <span class="badge badge-on" id="conn-badge">WiFi Connected</span>
+    <span class="badge badge-on" id="ts-badge">ThingSpeak ↑</span>
+    <span style="margin-left:auto;font-size:11px;color:var(--color-text-secondary)" id="clock">--:--:--</span>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title">Soil moisture</div>
+      <div><span class="big-val" id="val-moisture">--</span><span class="unit">%</span></div>
+      <div class="bar-track"><div class="bar-fill bar-moisture" id="bar-moisture" style="width:0%"></div></div>
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px" id="moisture-status">—</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Temperature</div>
+      <div><span class="big-val" id="val-temp">--</span><span class="unit">°C</span></div>
+      <div class="bar-track"><div class="bar-fill bar-warn" id="bar-temp" style="width:0%"></div></div>
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px" id="temp-status">DHT22</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Humidity</div>
+      <div><span class="big-val" id="val-hum">--</span><span class="unit">%</span></div>
+      <div class="bar-track"><div class="bar-fill bar-humidity" id="bar-hum" style="width:0%"></div></div>
+      <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">DHT22</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="section-title">All sensors</div>
+      <div class="sensor-row">
+        <div class="sensor-icon" style="background:#E1F5EE"><i class="ti ti-droplet" style="color:#1D9E75;font-size:14px" aria-hidden="true"></i></div>
+        <span class="sensor-name">Soil moisture</span>
+        <span class="sensor-val" id="s-moisture">-- %</span>
+      </div>
+      <div class="sensor-row">
+        <div class="sensor-icon" style="background:#FAEEDA"><i class="ti ti-temperature" style="color:#BA7517;font-size:14px" aria-hidden="true"></i></div>
+        <span class="sensor-name">Temperature</span>
+        <span class="sensor-val" id="s-temp">-- °C</span>
+      </div>
+      <div class="sensor-row">
+        <div class="sensor-icon" style="background:#E6F1FB"><i class="ti ti-cloud" style="color:#185FA5;font-size:14px" aria-hidden="true"></i></div>
+        <span class="sensor-name">Humidity</span>
+        <span class="sensor-val" id="s-hum">-- %</span>
+      </div>
+      <div class="sensor-row">
+        <div class="sensor-icon" style="background:#EAF3DE"><i class="ti ti-sun" style="color:#3B6D11;font-size:14px" aria-hidden="true"></i></div>
+        <span class="sensor-name">Light intensity</span>
+        <span class="sensor-val" id="s-lux">-- lux</span>
+      </div>
+      <div class="sensor-row">
+        <div class="sensor-icon" style="background:#FAECE7"><i class="ti ti-test-pipe" style="color:#993C1D;font-size:14px" aria-hidden="true"></i></div>
+        <span class="sensor-name">pH value</span>
+        <span class="sensor-val" id="s-ph">--</span>
+      </div>
+      <div class="sensor-row">
+        <div class="sensor-icon" style="background:#EEEDFE"><i class="ti ti-activity" style="color:#534AB7;font-size:14px" aria-hidden="true"></i></div>
+        <span class="sensor-name">ET₀ (Penman-Monteith)</span>
+        <span class="sensor-val" id="s-et">-- mm/d</span>
+      </div>
+      <div class="sensor-row">
+        <div class="sensor-icon" style="background:#E6F1FB"><i class="ti ti-cloud-rain" style="color:#185FA5;font-size:14px" aria-hidden="true"></i></div>
+        <span class="sensor-name">Rain prob (6h)</span>
+        <span class="sensor-val" id="s-rain">-- %</span>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="card">
+        <div class="section-title">ML model — irrigation decision</div>
+        <div id="decision-box" class="decision-wait">Awaiting sensor data...</div>
+        <div style="margin-top:8px;">
+          <div class="ml-row"><span class="ml-label">P(Irrigate)</span><div class="ml-bar"><div class="ml-fill" id="ml-bar-irr" style="width:0%"></div></div><span class="ml-pct" id="ml-pct-irr">0%</span></div>
+          <div class="ml-row"><span class="ml-label">Soil moisture deficit</span><div class="ml-bar"><div class="ml-fill" style="background:#BA7517" id="ml-bar-def" style="width:0%"></div></div><span class="ml-pct" id="ml-pct-def">0%</span></div>
+          <div class="ml-row"><span class="ml-label">ET₀ demand</span><div class="ml-bar"><div class="ml-fill" style="background:#185FA5" id="ml-bar-et" style="width:0%"></div></div><span class="ml-pct" id="ml-pct-et">0%</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">Pump control</div>
+        <div class="pump-indicator">
+          <div class="pump-dot idle" id="pump-dot"></div>
+          <span style="font-size:13px;color:var(--color-text-primary);flex:1" id="pump-status">Standby</span>
+          <span class="badge badge-off" id="pump-badge">OFF</span>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--color-text-secondary)">Last watered: <span id="last-water">—</span></div>
+        <div style="font-size:11px;color:var(--color-text-secondary)">Total events today: <span id="total-water">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Simulation controls</div>
+    <div class="slider-row" style="margin-bottom:6px;">
+      <span style="min-width:120px;">Soil moisture</span>
+      <input type="range" min="5" max="90" value="28" id="ctrl-moisture" oninput="manualUpdate()">
+      <span class="slider-val" id="ctrl-moisture-val">28%</span>
+    </div>
+    <div class="slider-row" style="margin-bottom:6px;">
+      <span style="min-width:120px;">Temperature</span>
+      <input type="range" min="18" max="44" value="32" id="ctrl-temp" oninput="manualUpdate()">
+      <span class="slider-val" id="ctrl-temp-val">32°C</span>
+    </div>
+    <div class="slider-row" style="margin-bottom:10px;">
+      <span style="min-width:120px;">Rain prob (6h)</span>
+      <input type="range" min="0" max="100" value="10" id="ctrl-rain" oninput="manualUpdate()">
+      <span class="slider-val" id="ctrl-rain-val">10%</span>
+    </div>
+    <div class="controls">
+      <button class="btn" onclick="triggerScenario('drought')">Drought scenario</button>
+      <button class="btn" onclick="triggerScenario('rain')">Heavy rain forecast</button>
+      <button class="btn" onclick="triggerScenario('optimal')">Optimal conditions</button>
+      <button class="btn btn-green" onclick="forcePump()">Force pump ON</button>
+      <button class="btn" onclick="clearLog()">Clear log</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">ESP32 serial monitor</div>
+    <div class="serial" id="serial"></div>
+  </div>
+</div>
+
+<script>
+let state = {
+  moisture: 28, temp: 32, hum: 58, lux: 540, ph: 6.8,
+  et0: 5.2, rainProb: 0.1, pumpCount: 0, pumpActive: false,
+  lastWater: null, tick: 0
+};
+let logLines = [];
+const MAX_LOG = 60;
+
+function fmt(n, d=1){ return Number(n).toFixed(d); }
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function log(msg, type='ok'){
+  const now = new Date();
+  const t = `[${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}]`;
+  logLines.push({t, msg, type});
+  if(logLines.length > MAX_LOG) logLines.shift();
+  const el = document.getElementById('serial');
+  el.innerHTML = logLines.map(l=>`<span class="serial-line ${l.type}">${l.t} ${l.msg}</span>`).join('\n');
+  el.scrollTop = el.scrollHeight;
+}
+
+function computeET0(temp, hum, lux){
+  const es = 0.6108 * Math.exp((17.27*temp)/(temp+237.3));
+  const ea = es * (hum/100);
+  const delta = (4098*es)/Math.pow(temp+237.3,2);
+  const gamma = 0.0665;
+  const Rn = (lux/1000) * 12;
+  const u2 = 1.8;
+  const et0 = (0.408*delta*Rn + gamma*(900/(temp+273))*u2*(es-ea)) / (delta + gamma*(1+0.34*u2));
+  return Math.max(et0,0);
+}
+
+function mlPredict(s){
+  let score = 0;
+  if(s.moisture < 30) score += 0.4;
+  else if(s.moisture < 45) score += 0.15;
+  if(s.rainProb < 0.2) score += 0.2;
+  else if(s.rainProb > 0.6) score -= 0.3;
+  if(s.et0 > 5) score += 0.2;
+  else if(s.et0 > 3) score += 0.08;
+  if(s.temp > 35) score += 0.1;
+  if(s.hum < 40) score += 0.05;
+  return Math.max(0, Math.min(1, score));
+}
+
+function updateUI(){
+  const s = state;
+  s.et0 = computeET0(s.temp, s.hum, s.lux);
+  const prob = mlPredict(s);
+  const irrigate = prob > 0.48 && !s.pumpActive;
+
+  document.getElementById('val-moisture').textContent = fmt(s.moisture,0);
+  document.getElementById('bar-moisture').style.width = s.moisture+'%';
+  document.getElementById('moisture-status').textContent = s.moisture < 30 ? 'Below threshold (30%)' : s.moisture < 50 ? 'Adequate' : 'Well watered';
+  document.getElementById('moisture-status').style.color = s.moisture < 30 ? 'var(--color-text-warning)' : 'var(--color-text-secondary)';
+
+  document.getElementById('val-temp').textContent = fmt(s.temp,1);
+  document.getElementById('bar-temp').style.width = ((s.temp-18)/26*100)+'%';
+  document.getElementById('val-hum').textContent = fmt(s.hum,0);
+  document.getElementById('bar-hum').style.width = s.hum+'%';
+
+  document.getElementById('s-moisture').textContent = fmt(s.moisture,1)+' %';
+  document.getElementById('s-temp').textContent = fmt(s.temp,1)+' °C';
+  document.getElementById('s-hum').textContent = fmt(s.hum,0)+' %';
+  document.getElementById('s-lux').textContent = fmt(s.lux,0)+' lux';
+  document.getElementById('s-ph').textContent = fmt(s.ph,2);
+  document.getElementById('s-et').textContent = fmt(s.et0,2)+' mm/d';
+  document.getElementById('s-rain').textContent = fmt(s.rainProb*100,0)+' %';
+
+  const pct = Math.round(prob*100);
+  const deficit = Math.max(0,Math.round((30-s.moisture)/30*100));
+  const etPct = Math.min(100,Math.round(s.et0/8*100));
+  document.getElementById('ml-bar-irr').style.width = pct+'%';
+  document.getElementById('ml-pct-irr').textContent = pct+'%';
+  document.getElementById('ml-bar-def').style.width = deficit+'%';
+  document.getElementById('ml-pct-def').textContent = deficit+'%';
+  document.getElementById('ml-bar-et').style.width = etPct+'%';
+  document.getElementById('ml-pct-et').textContent = etPct+'%';
+
+  const db = document.getElementById('decision-box');
+  if(irrigate){
+    db.className='decision-box decision-irrigate';
+    db.textContent='IRRIGATE — P='+pct+'% | soil '+fmt(s.moisture,0)+'% < threshold | ET₀ '+fmt(s.et0,2)+' mm/d';
+  } else {
+    db.className='decision-box decision-wait';
+    db.textContent='WAIT — P='+pct+'%'+( s.rainProb>0.5 ? ' | rain forecast '+fmt(s.rainProb*100,0)+'%' : '' )+( s.moisture>=30 ? ' | moisture adequate' : '' );
+  }
+
+  if(irrigate && !s.pumpActive) activatePump();
+
+  const now = new Date();
+  document.getElementById('clock').textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+function activatePump(){
+  state.pumpActive = true;
+  document.getElementById('pump-dot').className='pump-dot active';
+  document.getElementById('pump-status').textContent='Watering... (15s)';
+  document.getElementById('pump-badge').className='badge badge-on';
+  document.getElementById('pump-badge').textContent='ON';
+  log('[PUMP] Activated — 15s cycle','ok');
+  log('[THINGSPEAK] Field6=1 uploaded','info');
+  state.pumpCount++;
+  document.getElementById('total-water').textContent = state.pumpCount;
+  setTimeout(()=>{
+    state.pumpActive = false;
+    state.moisture = Math.min(75, state.moisture + 22);
+    const t=new Date();
+    state.lastWater = `${pad(t.getHours())}:${pad(t.getMinutes())}`;
+    document.getElementById('last-water').textContent = state.lastWater;
+    document.getElementById('pump-dot').className='pump-dot idle';
+    document.getElementById('pump-status').textContent='Standby';
+    document.getElementById('pump-badge').className='badge badge-off';
+    document.getElementById('pump-badge').textContent='OFF';
+    log('[PUMP] OFF — moisture now '+fmt(state.moisture,0)+'%','ok');
+    updateUI();
+  }, 3000);
+}
+
+function triggerScenario(s){
+  if(s==='drought'){
+    state.moisture=14; state.temp=38; state.hum=32; state.lux=820; state.rainProb=0.05;
+    document.getElementById('ctrl-moisture').value=14;
+    document.getElementById('ctrl-temp').value=38;
+    document.getElementById('ctrl-rain').value=5;
+    log('[SCENARIO] Drought conditions loaded','warn');
+  } else if(s==='rain'){
+    state.moisture=68; state.temp=24; state.hum=88; state.lux=180; state.rainProb=0.85;
+    document.getElementById('ctrl-moisture').value=68;
+    document.getElementById('ctrl-temp').value=24;
+    document.getElementById('ctrl-rain').value=85;
+    log('[SCENARIO] Heavy rain forecast — irrigation suppressed','info');
+  } else {
+    state.moisture=52; state.temp=28; state.hum=62; state.lux=540; state.rainProb=0.15;
+    document.getElementById('ctrl-moisture').value=52;
+    document.getElementById('ctrl-temp').value=28;
+    document.getElementById('ctrl-rain').value=15;
+    log('[SCENARIO] Optimal conditions loaded','ok');
+  }
+  updateSliderLabels(); updateUI();
+}
+
+function forcePump(){
+  if(!state.pumpActive){ activatePump(); log('[MANUAL] Pump forced ON by user','warn'); }
+}
+
+function manualUpdate(){
+  state.moisture = +document.getElementById('ctrl-moisture').value;
+  state.temp = +document.getElementById('ctrl-temp').value;
+  state.rainProb = +document.getElementById('ctrl-rain').value / 100;
+  updateSliderLabels();
+  updateUI();
+}
+
+function updateSliderLabels(){
+  document.getElementById('ctrl-moisture-val').textContent=state.moisture+'%';
+  document.getElementById('ctrl-temp-val').textContent=state.temp+'°C';
+  document.getElementById('ctrl-rain-val').textContent=Math.round(state.rainProb*100)+'%';
+}
+
+function clearLog(){ logLines=[]; document.getElementById('serial').innerHTML=''; }
+
+function jitter(base, range){ return base + (Math.random()-0.5)*range; }
+
+log('[BOOT] Smart Watering System v1.0','ok');
+log('[WIFI] Connected — IP 192.168.1.42','ok');
+log('[THINGSPEAK] Channel 2847391 ready','info');
+log('[MODEL] irrigation_rf_model.pkl loaded','ok');
+log('[SCHEDULER] 30-min cron job started','info');
+
+setInterval(()=>{
+  state.tick++;
+  state.hum = Math.max(20, Math.min(95, jitter(state.hum, 1.2)));
+  state.lux = Math.max(50, Math.min(1000, jitter(state.lux, 30)));
+  state.ph = Math.max(5.5, Math.min(8.5, jitter(state.ph, 0.05)));
+  if(!state.pumpActive) state.moisture = Math.max(5, state.moisture - 0.08);
+
+  if(state.tick % 6 === 0){
+    log(`[SENSOR] M:${fmt(state.moisture,1)}% T:${fmt(state.temp,1)}°C H:${fmt(state.hum,0)}% lux:${fmt(state.lux,0)}`,'ok');
+  }
+  if(state.tick % 20 === 0){
+    log(`[THINGSPEAK] Fields 1-6 uploaded successfully`,'info');
+  }
+  if(state.tick % 60 === 0){
+    log(`[ML] ET₀=${fmt(state.et0,2)} mm/d | P(irrigate)=${Math.round(mlPredict(state)*100)}%`,'info');
+  }
+  updateUI();
+}, 1000);
+
+updateSliderLabels();
+updateUI();
+</script>
