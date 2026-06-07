@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Watering System — Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --green: #2ecc71;
+      --blue: #3498db;
+      --orange: #e67e22;
+      --red: #e74c3c;
+      --bg: #0f1923;
+      --card: #1a2535;
+      --border: #2a3a50;
+      --text: #e8edf4;
+      --muted: #8899aa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+    header .badge {
+      background: var(--green);
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .timestamp { font-size: 0.8rem; color: var(--muted); }
+
+    .container { max-width: 1280px; margin: 0 auto; padding: 24px 32px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent, var(--blue));
+    }
+    .stat-card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .stat-card .value { font-size: 2rem; font-weight: 700; margin: 8px 0 4px; color: var(--accent, var(--text)); }
+    .stat-card .unit { font-size: 0.8rem; color: var(--muted); }
+    .stat-card .icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 2.2rem; opacity: 0.15; }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .chart-card h3 { font-size: 0.9rem; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+
+    .pump-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .pump-info h3 { font-size: 1rem; margin-bottom: 4px; }
+    .pump-info p { font-size: 0.8rem; color: var(--muted); }
+    .pump-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+    }
+    .dot.active { background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+
+    .log-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .log-table th { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+    .log-table td { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .log-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.72rem; font-weight: 600; }
+    .tag.irrigate { background: rgba(52,152,219,0.15); color: var(--blue); }
+    .tag.skip { background: rgba(46,204,113,0.15); color: var(--green); }
+    .tag.alert { background: rgba(231,76,60,0.15); color: var(--red); }
+
+    footer { text-align: center; padding: 20px; color: var(--muted); font-size: 0.78rem; border-top: 1px solid var(--border); margin-top: 24px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌱 Smart Watering System <span class="badge">LIVE</span></h1>
+  <div class="timestamp" id="lastUpdate">Last update: —</div>
+</header>
+
+<div class="container">
+
+  <!-- Stat Cards -->
+  <div class="stats-grid">
+    <div class="stat-card" style="--accent:#3498db">
+      <div class="label">Soil Moisture</div>
+      <div class="value" id="soil">—</div>
+      <div class="unit">percent (%)</div>
+      <div class="icon">💧</div>
+    </div>
+    <div class="stat-card" style="--accent:#e67e22">
+      <div class="label">Temperature</div>
+      <div class="value" id="temp">—</div>
+      <div class="unit">°C</div>
+      <div class="icon">🌡️</div>
+    </div>
+    <div class="stat-card" style="--accent:#9b59b6">
+      <div class="label">Humidity</div>
+      <div class="value" id="humidity">—</div>
+      <div class="unit">percent (%)</div>
+      <div class="icon">🌫️</div>
+    </div>
+    <div class="stat-card" style="--accent:#f1c40f">
+      <div class="label">Light Level</div>
+      <div class="value" id="light">—</div>
+      <div class="unit">lux</div>
+      <div class="icon">☀️</div>
+    </div>
+    <div class="stat-card" style="--accent:#2ecc71">
+      <div class="label">pH Value</div>
+      <div class="value" id="ph">—</div>
+      <div class="unit">pH scale</div>
+      <div class="icon">🧪</div>
+    </div>
+    <div class="stat-card" style="--accent:#e74c3c">
+      <div class="label">ET₀ Estimate</div>
+      <div class="value" id="et0">—</div>
+      <div class="unit">mm/day</div>
+      <div class="icon">📊</div>
+    </div>
+  </div>
+
+  <!-- Pump Status -->
+  <div class="pump-panel">
+    <div class="pump-info">
+      <h3>Irrigation Pump</h3>
+      <p>Automatically controlled based on soil moisture threshold and ML prediction</p>
+    </div>
+    <div class="pump-status">
+      <div class="dot" id="pumpDot"></div>
+      <span id="pumpLabel">Checking...</span>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Soil Moisture Trend</h3>
+      <canvas id="moistureChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Temperature & Humidity</h3>
+      <canvas id="tempHumidChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- Event Log -->
+  <div class="chart-card">
+    <h3 style="margin-bottom:16px">Irrigation Event Log</h3>
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Soil Moisture</th>
+          <th>Temperature</th>
+          <th>Action</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody id="eventLog">
+        <tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Loading events...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer>Smart Watering System · SR University, Warangal · Powered by ThingSpeak & AI</footer>
+
+<script>
+  // ── Config ───────────────────────────────────────────────────
+  const CHANNEL_ID  = 'YOUR_CHANNEL_ID';
+  const READ_API    = 'YOUR_READ_API_KEY';
+  const REFRESH_SEC = 30;
+
+  const BASE = `https://api.thingspeak.com/channels/${CHANNEL_ID}`;
+
+  // ── Charts ───────────────────────────────────────────────────
+  const chartOpts = (color) => ({
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#8899aa', maxTicksLimit: 6 }, grid: { color: '#1e2e40' } },
+      y: { ticks: { color: '#8899aa' }, grid: { color: '#1e2e40' } }
+    }
+  });
+
+  const moistureCtx = document.getElementById('moistureChart').getContext('2d');
+  const moistureChart = new Chart(moistureCtx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ label: 'Soil %', data: [], borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.08)', fill: true, tension: 0.4, pointRadius: 2 }] },
+    options: { ...chartOpts('#3498db'), plugins: { legend: { display: false } } }
+  });
+
+  const thCtx = document.getElementById('tempHumidChart').getContext('2d');
+  const thChart = new Chart(thCtx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Temp °C', data: [], borderColor: '#e67e22', tension: 0.4, pointRadius: 2, yAxisID: 'y' },
+        { label: 'Humidity %', data: [], borderColor: '#9b59b6', tension: 0.4, pointRadius: 2, yAxisID: 'y1', borderDash: [4,4] }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#8899aa', boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: '#8899aa', maxTicksLimit: 6 }, grid: { color: '#1e2e40' } },
+        y:  { ticks: { color: '#e67e22' }, grid: { color: '#1e2e40' }, position: 'left' },
+        y1: { ticks: { color: '#9b59b6' }, grid: { drawOnChartArea: false }, position: 'right' }
+      }
+    }
+  });
+
+  // ── Fetch & Update ────────────────────────────────────────────
+  async function fetchData() {
+    try {
+      const [feedRes, lastRes] = await Promise.all([
+        fetch(`${BASE}/feeds.json?api_key=${READ_API}&results=40`),
+        fetch(`${BASE}/feeds/last.json?api_key=${READ_API}`)
+      ]);
+      const feed = await feedRes.json();
+      const last = await lastRes.json();
+
+      updateStatCards(last);
+      updateCharts(feed.feeds);
+      updateEventLog(feed.feeds);
+      document.getElementById('lastUpdate').textContent = `Last update: ${new Date().toLocaleTimeString()}`;
+    } catch (e) {
+      console.warn('ThingSpeak fetch failed (demo mode):', e.message);
+      loadDemoData();
+    }
+  }
+
+  function updateStatCards(last) {
+    const soil = parseFloat(last.field1);
+    document.getElementById('soil').textContent = isNaN(soil) ? '—' : soil.toFixed(1);
+    document.getElementById('temp').textContent = last.field2 ? parseFloat(last.field2).toFixed(1) : '—';
+    document.getElementById('humidity').textContent = last.field3 ? parseFloat(last.field3).toFixed(1) : '—';
+    document.getElementById('light').textContent = last.field4 ? Math.round(parseFloat(last.field4)) : '—';
+    document.getElementById('ph').textContent = last.field5 ? parseFloat(last.field5).toFixed(2) : '—';
+
+    // Rough ET0 estimate from temp & humidity
+    const T = parseFloat(last.field2) || 28;
+    const et0 = (0.0023 * (T + 17.8) * Math.sqrt(Math.abs(T - 15) + 1) * 20).toFixed(2);
+    document.getElementById('et0').textContent = et0;
+
+    const pumpOn = last.field6 === '1';
+    const dot = document.getElementById('pumpDot');
+    dot.className = 'dot' + (pumpOn ? ' active' : '');
+    document.getElementById('pumpLabel').textContent = pumpOn ? 'PUMP ACTIVE' : 'Standby';
+  }
+
+  function updateCharts(feeds) {
+    const labels = feeds.map(f => new Date(f.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+    moistureChart.data.labels = labels;
+    moistureChart.data.datasets[0].data = feeds.map(f => parseFloat(f.field1) || null);
+    moistureChart.update('none');
+
+    thChart.data.labels = labels;
+    thChart.data.datasets[0].data = feeds.map(f => parseFloat(f.field2) || null);
+    thChart.data.datasets[1].data = feeds.map(f => parseFloat(f.field3) || null);
+    thChart.update('none');
+  }
+
+  function updateEventLog(feeds) {
+    const tbody = document.getElementById('eventLog');
+    const events = feeds.filter(f => f.field6 === '1').slice(-8).reverse();
+    if (events.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">No irrigation events in this window</td></tr>';
+      return;
+    }
+    tbody.innerHTML = events.map(f => `
+      <tr>
+        <td>${new Date(f.created_at).toLocaleString()}</td>
+        <td>${parseFloat(f.field1).toFixed(1)}%</td>
+        <td>${parseFloat(f.field2).toFixed(1)}°C</td>
+        <td><span class="tag irrigate">IRRIGATE</span></td>
+        <td>Soil moisture below threshold</td>
+      </tr>
+    `).join('');
+  }
+
+  function loadDemoData() {
+    const now = Date.now();
+    const labels = Array.from({length: 20}, (_, i) => new Date(now - (19-i)*90000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+    const moisture = Array.from({length: 20}, () => 25 + Math.random()*30);
+    const temp = Array.from({length: 20}, () => 28 + Math.random()*6);
+    const hum = Array.from({length: 20}, () => 55 + Math.random()*20);
+
+    document.getElementById('soil').textContent = moisture[19].toFixed(1);
+    document.getElementById('temp').textContent = temp[19].toFixed(1);
+    document.getElementById('humidity').textContent = hum[19].toFixed(1);
+    document.getElementById('light').textContent = Math.round(400 + Math.random()*400);
+    document.getElementById('ph').textContent = (6.5 + Math.random()*1.5).toFixed(2);
+    document.getElementById('et0').textContent = (4 + Math.random()*3).toFixed(2);
+    document.getElementById('lastUpdate').textContent = `Demo mode — ${new Date().toLocaleTimeString()}`;
+
+    moistureChart.data.labels = labels;
+    moistureChart.data.datasets[0].data = moisture;
+    moistureChart.update('none');
+
+    thChart.data.labels = labels;
+    thChart.data.datasets[0].data = temp;
+    thChart.data.datasets[1].data = hum;
+    thChart.update('none');
+  }
+
+  fetchData();
+  setInterval(fetchData, REFRESH_SEC * 1000);
+</script>
+</body>
+</html>
