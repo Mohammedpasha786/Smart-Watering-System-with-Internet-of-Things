@@ -11,6 +11,9 @@ Drought and water scarcity affect hundreds of millions of people globally. Agric
 - Applies **machine learning** to predict irrigation needs
 - Automates water pump control or sends smart notifications
 - Forecasts seasonal water usage using time-series models
+# prototype
+<img width="1918" height="776" alt="image" src="https://github.com/user-attachments/assets/c0fb6062-7feb-455b-8bc6-cf9da0d30a22" />
+
 
 ## Features
 
